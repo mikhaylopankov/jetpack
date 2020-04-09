@@ -9,7 +9,6 @@ module.exports = {
 	setupFilesAfterEnv: [
 		'jest-allure/dist/setup',
 		'<rootDir>/lib/setup-env.js',
-		'<rootDir>/lib/jest.test.failure.js',
 		'expect-puppeteer',
 	],
 };
