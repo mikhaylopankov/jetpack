@@ -75,6 +75,7 @@ function render() {
 						component={ Main }
 					/>
 					<Route path="/setup" name={ i18n.translate( 'Set up' ) } component={ Main } />
+					<Route path="/setup/income" name={ i18n.translate( 'Income' ) } component={ Main } />
 					<Route path="/dashboard" name={ i18n.translate( 'At A Glance' ) } component={ Main } />
 					<Route
 						path="/my-plan"

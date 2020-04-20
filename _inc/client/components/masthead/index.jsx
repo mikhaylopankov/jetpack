@@ -72,7 +72,7 @@ export class Masthead extends React.Component {
 			),
 			isStatic = '' === this.props.route.path;
 
-		const hideNav = '/setup' === this.props.route.path;
+		const hideNav = this.props.route.path.startsWith( '/setup' );
 
 		return (
 			<div className="jp-masthead">
