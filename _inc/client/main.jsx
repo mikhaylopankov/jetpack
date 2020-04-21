@@ -4,8 +4,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { includes } from 'lodash';
-import { createHistory } from 'history';
-import { withRouter } from 'react-router';
+import { withRouter } from 'react-router-dom';
 import { translate as __ } from 'i18n-calypso';
 
 /**
@@ -58,12 +57,13 @@ class Main extends React.Component {
 		// Handles refresh, closing and navigating away from Jetpack's Admin Page
 		window.addEventListener( 'beforeunload', this.onBeforeUnload );
 		// Handles transition between routes handled by react-router
-		this.props.router.listenBefore( this.routerWillLeave );
+		const unblock = this.props.history.block( this.routerWillLeave );
+		unblock();
 
 		// Track initial page view
 		this.props.isSiteConnected &&
 			analytics.tracks.recordEvent( 'jetpack_wpa_page_view', {
-				path: this.props.route.path,
+				path: this.props.location.pathname,
 				current_version: this.props.currentVersion,
 			} );
 	}
@@ -127,14 +127,14 @@ class Main extends React.Component {
 
 	shouldComponentUpdate( nextProps ) {
 		// If user triggers Skip to main content or Skip to toolbar with keyboard navigation, stay in the same tab.
-		if ( includes( [ '/wpbody-content', '/wp-toolbar' ], nextProps.route.path ) ) {
+		if ( includes( [ '/wpbody-content', '/wp-toolbar' ], nextProps.location.pathname ) ) {
 			return false;
 		}
 
 		return (
 			nextProps.siteConnectionStatus !== this.props.siteConnectionStatus ||
 			nextProps.isLinked !== this.props.isLinked ||
-			nextProps.route.path !== this.props.route.path ||
+			nextProps.location.pathname !== this.props.location.pathname ||
 			nextProps.searchTerm !== this.props.searchTerm ||
 			nextProps.rewindStatus !== this.props.rewindStatus
 		);
@@ -142,10 +142,10 @@ class Main extends React.Component {
 
 	componentDidUpdate( prevProps ) {
 		// Track page view on change only
-		prevProps.route.path !== this.props.route.path &&
+		prevProps.location.pathname !== this.props.location.pathname &&
 			this.props.isSiteConnected &&
 			analytics.tracks.recordEvent( 'jetpack_wpa_page_view', {
-				path: this.props.route.path,
+				path: this.props.location.pathname,
 				current_version: this.props.currentVersion,
 			} );
 
@@ -177,13 +177,13 @@ class Main extends React.Component {
 
 		const settingsNav = (
 			<NavigationSettings
-				route={ this.props.route }
+				routeName={ this.props.routeName }
 				siteRawUrl={ this.props.siteRawUrl }
 				siteAdminUrl={ this.props.siteAdminUrl }
 			/>
 		);
 		let pageComponent,
-			navComponent = <Navigation route={ this.props.route } />;
+			navComponent = <Navigation routeName={ this.props.routeName } />;
 
 		switch ( route ) {
 			case '/dashboard':
@@ -240,8 +240,7 @@ class Main extends React.Component {
 
 			default:
 				// If no route found, kick them to the dashboard and do some url/history trickery
-				const history = createHistory();
-				history.replace( window.location.pathname + '?page=jetpack#/dashboard' );
+				this.props.history.replace( '/dashboard' );
 				pageComponent = (
 					<AtAGlance
 						siteRawUrl={ this.props.siteRawUrl }
@@ -263,44 +262,44 @@ class Main extends React.Component {
 
 	shouldShowAppsCard() {
 		// Do not show in settings page
-		const hashRoute = '#' + this.props.route.path;
+		const hashRoute = '#' + this.props.location.pathname;
 		return this.props.isSiteConnected && includes( dashboardRoutes, hashRoute );
 	}
 
 	shouldShowSupportCard() {
 		// Do not show in settings page
-		const hashRoute = '#' + this.props.route.path;
+		const hashRoute = '#' + this.props.location.pathname;
 		return this.props.isSiteConnected && includes( dashboardRoutes, hashRoute );
 	}
 
 	shouldShowRewindStatus() {
 		// Do not show on plans prompt page
-		const hashRoute = '#' + this.props.route.path;
+		const hashRoute = '#' + this.props.location.pathname;
 		return this.props.isSiteConnected && hashRoute !== plansPromptRoute;
 	}
 
 	shouldShowMasthead() {
 		// Do not show on plans prompt page
-		const hashRoute = '#' + this.props.route.path;
+		const hashRoute = '#' + this.props.location.pathname;
 		return hashRoute !== plansPromptRoute;
 	}
 
 	shouldShowFooter() {
 		// Do not show on plans prompt page
-		const hashRoute = '#' + this.props.route.path;
+		const hashRoute = '#' + this.props.location.pathname;
 		return hashRoute !== plansPromptRoute;
 	}
 
 	render() {
 		return (
 			<div>
-				{ this.shouldShowMasthead() && <Masthead route={ this.props.route } /> }
+				{ this.shouldShowMasthead() && <Masthead location={ this.props.location } /> }
 				<div className="jp-lower">
 					{ this.shouldShowRewindStatus() && <QueryRewindStatus /> }
 					<AdminNotices />
 					<JetpackNotices />
-					{ this.renderMainContent( this.props.route.path ) }
-					{ this.shouldShowSupportCard() && <SupportCard path={ this.props.route.path } /> }
+					{ this.renderMainContent( this.props.location.pathname ) }
+					{ this.shouldShowSupportCard() && <SupportCard path={ this.props.location.pathname } /> }
 					{ this.shouldShowAppsCard() && <AppsCard /> }
 				</div>
 				{ this.shouldShowFooter() && <Footer siteAdminUrl={ this.props.siteAdminUrl } /> }
