@@ -4,7 +4,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { includes } from 'lodash';
-import { withRouter } from 'react-router-dom';
+import { withRouter, Prompt } from 'react-router-dom';
 import { translate as __ } from 'i18n-calypso';
 
 /**
@@ -55,10 +55,8 @@ class Main extends React.Component {
 		this.initializeAnalytics();
 
 		// Handles refresh, closing and navigating away from Jetpack's Admin Page
-		window.addEventListener( 'beforeunload', this.onBeforeUnload );
-		// Handles transition between routes handled by react-router
-		const unblock = this.props.history.block( this.routerWillLeave );
-		unblock();
+		// beforeunload can not handle confirm calls in most of the browsers, so just clean up the flag.
+		window.addEventListener( 'beforeunload', this.props.clearUnsavedSettingsFlag );
 
 		// Track initial page view
 		this.props.isSiteConnected &&
@@ -79,40 +77,20 @@ class Main extends React.Component {
 	}
 
 	/*
-	 * Returns a string if there are unsaved module settings thus showing a confirm dialog to the user
-	 * according to the `beforeunload` event handling specification
-	 */
-	onBeforeUnload = () => {
-		if ( this.props.areThereUnsavedSettings ) {
-			if (
-				confirm(
-					__( 'There are unsaved settings in this tab that will be lost if you leave it. Proceed?' )
-				)
-			) {
-				this.props.clearUnsavedSettingsFlag();
-			} else {
-				return false;
-			}
-		}
-	};
-
-	/*
 	 * Shows a confirmation dialog if there are unsaved module settings.
 	 *
 	 * Return true or false according to the history.listenBefore specification which is part of react-router
 	 */
-	routerWillLeave = () => {
-		if ( this.props.areThereUnsavedSettings ) {
-			if (
-				confirm(
-					__( 'There are unsaved settings in this tab that will be lost if you leave it. Proceed?' )
-				)
-			) {
-				window.setTimeout( this.props.clearUnsavedSettingsFlag, 10 );
-			} else {
-				return false;
-			}
+	handleRouterWillLeave = () => {
+		const question = __(
+			'There are unsaved settings in this tab that will be lost if you leave it. Proceed?'
+		);
+
+		if ( confirm( question ) ) {
+			window.setTimeout( this.props.clearUnsavedSettingsFlag, 10 );
+			return true;
 		}
+		return false;
 	};
 
 	initializeAnalytics = () => {
@@ -136,18 +114,24 @@ class Main extends React.Component {
 			nextProps.isLinked !== this.props.isLinked ||
 			nextProps.location.pathname !== this.props.location.pathname ||
 			nextProps.searchTerm !== this.props.searchTerm ||
-			nextProps.rewindStatus !== this.props.rewindStatus
+			nextProps.rewindStatus !== this.props.rewindStatus ||
+			nextProps.areThereUnsavedSettings !== this.props.areThereUnsavedSettings
 		);
 	}
 
 	componentDidUpdate( prevProps ) {
+		const routeChanged = prevProps.location.pathname !== this.props.location.pathname;
 		// Track page view on change only
-		prevProps.location.pathname !== this.props.location.pathname &&
+		routeChanged &&
 			this.props.isSiteConnected &&
 			analytics.tracks.recordEvent( 'jetpack_wpa_page_view', {
 				path: this.props.location.pathname,
 				current_version: this.props.currentVersion,
 			} );
+
+		// if ( routeChanged ) {
+		// 	this.handleRouterWillLeave();
+		// }
 
 		// Not taking into account development mode here because changing the connection
 		// status without reloading is possible only by disconnecting a live site not
@@ -298,6 +282,10 @@ class Main extends React.Component {
 					{ this.shouldShowRewindStatus() && <QueryRewindStatus /> }
 					<AdminNotices />
 					<JetpackNotices />
+					<Prompt
+						when={ this.props.areThereUnsavedSettings }
+						message={ this.handleRouterWillLeave }
+					/>
 					{ this.renderMainContent( this.props.location.pathname ) }
 					{ this.shouldShowSupportCard() && <SupportCard path={ this.props.location.pathname } /> }
 					{ this.shouldShowAppsCard() && <AppsCard /> }
