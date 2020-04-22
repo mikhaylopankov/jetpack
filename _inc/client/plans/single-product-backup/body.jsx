@@ -4,7 +4,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { translate as __ } from 'i18n-calypso';
-import { withRouter } from 'react-router';
+import { withRouter } from 'react-router-dom';
 
 /**
  * Internal dependencies
@@ -16,6 +16,7 @@ import PlanRadioButton from '../single-product-components/plan-radio-button';
 import ProductSavings from '../single-product-components/product-savings';
 import UpgradeButton from '../single-product-components/upgrade-button';
 import PromoNudge from '../single-product-components/promo-nudge';
+import { getRouteName } from '../../admin';
 
 class SingleProductBackupBody extends React.Component {
 	static propTypes = {
@@ -31,12 +32,13 @@ class SingleProductBackupBody extends React.Component {
 	};
 
 	handleUpgradeButtonClick = selectedBackupType => () => {
+		const pageName = getRouteName( this.props.location.pathname );
 		analytics.tracks.recordJetpackClick( {
 			target: `upgrade-${ selectedBackupType }`,
 			type: 'upgrade',
 			product: selectedBackupType,
 			// NOTE: This depends on React-Router's withRouter HOC
-			page: this.props.routes[ 0 ] && this.props.routes[ 0 ].name,
+			page: this.props.location.pathname && pageName,
 		} );
 	};
 
